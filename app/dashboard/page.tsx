@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import type React from "react"
 
 import { useEffect, useRef, useState } from "react"
 import { Activity, ChevronDown, ChevronLeft, ChevronRight, Database, Download, RefreshCw, Search } from "lucide-react"
@@ -9,15 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 interface MonitoringRecord {
-  id: string
   date_time: string
   source: string
-  total_records: number
-  success_status: boolean
+  total_records: number | string
+  success_status: string
   error_message: string
-  created_at: string
 }
 
 export default function Dashboard() {
@@ -31,177 +30,124 @@ export default function Dashboard() {
   const [itemsPerPage, setItemsPerPage] = useState(5)
   const [totalPages, setTotalPages] = useState(1)
 
-  // Records data
+  // Generate more sample data for pagination demo
+  const generateSampleData = async (): Promise<MonitoringRecord[]> => {
+    // const sources = [
+    //   "Montgomery Probate",
+    //   "Montgomery Foreclosure",
+    //   "Montgomery Divorce",
+    //   "Greene Probate",
+    //   "Greene Foreclosure",
+    //   "Greene Divorce",
+    //   "Greene Tax",
+    // ]
+    // const statuses = ["true", "false"]
+    // const errors = [
+    //   "Cookie expired",
+    //   "CAPTCHA block",
+    //   "No new data found",
+    //   "Connection timeout",
+    //   "Authentication failed",
+    //   "Server error 500",
+    //   "Rate limit exceeded",
+    // ]
+
+
+    const endpoint = 'http://localhost:8000/api/v1/scraping-logs'
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    })
+    const data = await response.json()
+    console.log(data)
+
+
+
+    // const records: MonitoringRecord[] = data.map((record: MonitoringRecord) => ({
+    //   dateTime: record.dateTime,
+    //   source: record.source,
+    //   totalRecords: record.totalRecords,
+    //   successStatus: record.successStatus,
+    //   errorMessages: record.errorMessages,
+    // }))
+
+    // // Generate 50 sample records
+    // for (let i = 0; i < 50; i++) {
+    //   const date = new Date()
+    //   date.setDate(date.getDate() - Math.floor(Math.random() * 30)) // Random date within last 30 days
+    //   date.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60))
+
+    //   const dateTimeStr = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`
+    //   const source = sources[Math.floor(Math.random() * sources.length)]
+    //   const totalRecords = Math.floor(Math.random() * 20) + 1
+    //   const successStatus = Math.random() > 0.2 ? "True" : "False" // 80% success rate
+    //   const errorMessages = successStatus === "True" ? "" : errors[Math.floor(Math.random() * errors.length)]
+
+    //   records.push({
+    //     dateTime: dateTimeStr,
+    //     source,
+    //     totalRecords,
+    //     successStatus,
+    //     errorMessages,
+    //   })
+    // }
+
+    // Sort by date (newest first)
+    data.sort((a: MonitoringRecord, b: MonitoringRecord) => {
+      const dateA = new Date(a.date_time)
+      const dateB = new Date(b.date_time)
+      return dateB.getTime() - dateA.getTime()
+    })
+
+    return data
+  }
+
+  // Sample data
   const [allRecords, setAllRecords] = useState<MonitoringRecord[]>([])
   const [filteredRecords, setFilteredRecords] = useState<MonitoringRecord[]>([])
   const [displayedRecords, setDisplayedRecords] = useState<MonitoringRecord[]>([])
   const [sources, setSources] = useState<string[]>(["All Sources"])
-  const [lastRunSuccess, setLastRunSuccess] = useState<boolean>(false)
-  const [lastRunDate, setLastRunDate] = useState<string>("")
-  const [totalRecordsFetched, setTotalRecordsFetched] = useState<number>(0)
 
-  // Fetch records from backend
-  const fetchRecords = async () => {
-    setIsLoading(true)
-    try {
-      // Try multiple API URLs in sequence
-      const urls = [
-        '/api/v1/scraping-logs', // Try the local proxy first
-        'http://localhost:8000/api/v1/scraping-logs' // Try direct backend connection as fallback
-      ];
-      
-      let data: MonitoringRecord[] = [];
-      let fetchSuccess = false;
-      
-      // Try each URL until one works
-      for (const url of urls) {
-        try {
-          console.log(`Attempting to fetch from: ${url}`);
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-          
-          const response = await fetch(url, {
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            signal: controller.signal
-          });
-          
-          clearTimeout(timeoutId);
-          
-          if (!response.ok) {
-            throw new Error(`Server responded with status: ${response.status}`);
-          }
-          
-          data = await response.json();
-          fetchSuccess = true;
-          console.log(`Successfully fetched data from: ${url}`);
-          break; // Exit the loop if successful
-        } catch (error) {
-          console.error(`Error fetching from ${url}:`, error);
-          // Continue to next URL
-        }
-      }
-      
-      if (!fetchSuccess) {
-        throw new Error('All fetch attempts failed');
-      }
-      
-      // Sort by date (newest first)
-      data.sort((a, b) => {
-        const dateA = new Date(a.date_time)
-        const dateB = new Date(b.date_time)
-        return dateB.getTime() - dateA.getTime()
-      })
-      
-      setAllRecords(data)
-      
-      // Extract unique sources
-      const uniqueSources = Array.from(new Set(data.map(record => record.source)))
-      setSources(["All Sources", ...uniqueSources])
-      
-      // Set last run info
-      if (data.length > 0) {
-        const latestRecord = data[0]
-        setLastRunSuccess(latestRecord.success_status)
-        setLastRunDate(formatDateFromISO(latestRecord.date_time))
-        setTotalRecordsFetched(data.reduce((sum, record) => sum + record.total_records, 0))
-      }
-      
-      setIsLoading(false)
-    } catch (error) {
-      console.error("All API attempts failed, using mock data:", error)
-      // Use mock data if API is unavailable
-      generateMockData()
-      setIsLoading(false)
-    }
+  // Get the most recent run date from records
+  const getLastRunDate = () => {
+    if (allRecords.length === 0) return "--/--/----"
+    const lastRecord = allRecords[0] // Records are already sorted by date in descending order
+    return formatDateTime(lastRecord.date_time)
   }
 
-  // Generate mock data when API is unavailable
-  const generateMockData = () => {
-    const sources = [
-      "Montgomery Probate",
-      "Montgomery Foreclosure", 
-      "Montgomery Divorce",
-      "Greene Probate",
-      "Greene Foreclosure",
-      "Greene Divorce",
-      "Greene Tax"
-    ]
-    
-    const mockRecords: MonitoringRecord[] = [
-      {
-        id: "e9916034-eae4-4785-8ae1-a6cbbe459205",
-        date_time: "2025-05-12T13:36:33.464778",
-        source: "Greene Tax",
-        total_records: 6,
-        success_status: true,
-        error_message: "",
-        created_at: "2025-05-12T17:36:34.157838Z"
-      },
-      {
-        id: "c75dc165-840b-4938-b836-7d62c0629136",
-        date_time: "2025-05-12T13:45:37.793851",
-        source: "Greene Foreclosure",
-        total_records: 42,
-        success_status: true,
-        error_message: "",
-        created_at: "2025-05-12T17:45:38.472565Z"
-      },
-      {
-        id: "00263ccd-9f0c-43ac-a217-d158040fdc14",
-        date_time: "2025-05-12T14:00:49.418941",
-        source: "Greene Divorce",
-        total_records: 79,
-        success_status: true,
-        error_message: "",
-        created_at: "2025-05-12T18:00:50.031483Z"
-      },
-      {
-        id: "0282f400-f9c9-4296-8445-551c61a9ea7f",
-        date_time: "2025-05-12T14:14:18.929696",
-        source: "Greene Probate",
-        total_records: 201,
-        success_status: true,
-        error_message: "",
-        created_at: "2025-05-12T18:14:21.050049Z"
-      },
-      {
-        id: "321d5bf1-0c69-4cbc-ab50-cefddbdb5c4e",
-        date_time: "2025-05-12T15:22:00",
-        source: "Montgomery Divorce",
-        total_records: 0,
-        success_status: false,
-        error_message: "No data",
-        created_at: "2025-05-12T19:22:04.260760Z"
-      },
-      {
-        id: "da14d3ef-b0e6-443e-b904-3114f04dca54",
-        date_time: "2025-05-12T15:23:37.571954",
-        source: "Montgomery Foreclosure",
-        total_records: 1,
-        success_status: true,
-        error_message: "",
-        created_at: "2025-05-12T19:23:38.242827Z"
-      }
-    ];
-    
-    setAllRecords(mockRecords);
-    setSources(["All Sources", ...sources]);
-    
-    // Set last run info
-    if (mockRecords.length > 0) {
-      const latestRecord = mockRecords[0];
-      setLastRunSuccess(latestRecord.success_status);
-      setLastRunDate(formatDateFromISO(latestRecord.date_time));
-      setTotalRecordsFetched(mockRecords.reduce((sum, record) => sum + record.total_records, 0));
-    }
+  // Get the success status of the most recent run
+  const getLastRunSuccess = () => {
+    if (allRecords.length === 0) return "--"
+    const lastRecord = allRecords[0]
+    return lastRecord.success_status === "true" ? "True" : "False"
   }
 
   // Initialize data
   useEffect(() => {
-    fetchRecords()
+    const fetchData = async () => {
+      const records = await generateSampleData()
+      setAllRecords(records)
+
+      // Set sources in the specified order
+      setSources([
+        "All Sources",
+        "Montgomery Probate",
+        "Montgomery Foreclosure",
+        "Montgomery Divorce",
+        "Greene Probate",
+        "Greene Foreclosure",
+        "Greene Divorce",
+        "Greene Tax",
+      ])
+
+      // Set filtered records
+      setFilteredRecords(records)
+    }
+
+    fetchData()
   }, [])
 
   // Update displayed records when filtered records or pagination changes
@@ -236,11 +182,20 @@ export default function Dashboard() {
     setCurrentPage(1) // Reset to first page when filter changes
   }, [selectedSource, allRecords])
 
-  // Update time - only run on client side
+  // Simulate data loading
   useEffect(() => {
-    // Set initial time after component mounts (client-side only)
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 2000)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Update time with client-only rendering
+  useEffect(() => {
+    // Set initial time only on client
     setCurrentTime(new Date())
-    
+
     const interval = setInterval(() => {
       setCurrentTime(new Date())
     }, 1000)
@@ -266,32 +221,6 @@ export default function Dashboard() {
     setCurrentPage(1) // Reset to first page when items per page changes
   }
 
-  // Format date from ISO string
-  const formatDateFromISO = (isoString: string) => {
-    const date = new Date(isoString)
-    return date.toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
-    })
-  }
-
-  // Format time from ISO string
-  const formatTimeFromISO = (isoString: string) => {
-    const date = new Date(isoString)
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    })
-  }
-
-  // Format display date/time for table
-  const formatDisplayDateTime = (isoString: string) => {
-    const date = new Date(isoString)
-    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`
-  }
-
   // Particle effect
   useEffect(() => {
     const canvas = canvasRef.current
@@ -313,10 +242,14 @@ export default function Dashboard() {
       speedX: number
       speedY: number
       color: string
+      canvasWidth: number
+      canvasHeight: number
 
-      constructor() {
-        this.x = Math.random() * (canvas?.width || 0)
-        this.y = Math.random() * (canvas?.height || 0)
+      constructor(canvasWidth: number, canvasHeight: number) {
+        this.canvasWidth = canvasWidth
+        this.canvasHeight = canvasHeight
+        this.x = Math.random() * canvasWidth
+        this.y = Math.random() * canvasHeight
         this.size = Math.random() * 3 + 1
         this.speedX = (Math.random() - 0.5) * 0.5
         this.speedY = (Math.random() - 0.5) * 0.5
@@ -327,16 +260,13 @@ export default function Dashboard() {
         this.x += this.speedX
         this.y += this.speedY
 
-        if (canvas) {
-          if (this.x > canvas.width) this.x = 0
-          if (this.x < 0) this.x = canvas.width
-          if (this.y > canvas.height) this.y = 0
-          if (this.y < 0) this.y = canvas.height
-        }
+        if (this.x > this.canvasWidth) this.x = 0
+        if (this.x < 0) this.x = this.canvasWidth
+        if (this.y > this.canvasHeight) this.y = 0
+        if (this.y < 0) this.y = this.canvasHeight
       }
 
-      draw() {
-        if (!ctx) return
+      draw(ctx: CanvasRenderingContext2D) {
         ctx.fillStyle = this.color
         ctx.beginPath()
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
@@ -344,8 +274,9 @@ export default function Dashboard() {
       }
     }
 
+    // Create particles with canvas dimensions passed to constructor
     for (let i = 0; i < particleCount; i++) {
-      particles.push(new Particle())
+      particles.push(new Particle(canvas.width, canvas.height))
     }
 
     function animate() {
@@ -354,7 +285,7 @@ export default function Dashboard() {
 
       for (const particle of particles) {
         particle.update()
-        particle.draw()
+        particle.draw(ctx)
       }
 
       requestAnimationFrame(animate)
@@ -375,8 +306,9 @@ export default function Dashboard() {
     }
   }, [])
 
-  // Format time
-  const formatTime = (date: Date) => {
+  // Format time - only run on client when currentTime exists
+  const formatTime = (date: Date | null) => {
+    if (!date) return "--:--:--"
     return date.toLocaleTimeString("en-US", {
       hour12: false,
       hour: "2-digit",
@@ -385,8 +317,9 @@ export default function Dashboard() {
     })
   }
 
-  // Format date
-  const formatDate = (date: Date) => {
+  // Format date - only run on client when currentTime exists
+  const formatDate = (date: Date | null) => {
+    if (!date) return "--/--/----"
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -394,9 +327,10 @@ export default function Dashboard() {
     })
   }
 
-  // Handle refresh
-  const handleRefresh = () => {
-    fetchRecords()
+  // Format date time string to desired format
+  const formatDateTime = (dateTimeStr: string) => {
+    const date = new Date(dateTimeStr)
+    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`
   }
 
   return (
@@ -439,12 +373,7 @@ export default function Dashboard() {
                 className="bg-transparent border-none focus:outline-none text-sm w-40 placeholder:text-slate-500"
               />
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-950/30"
-              onClick={handleRefresh}
-            >
+            <Button variant="outline" size="sm" className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-950/30">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
@@ -461,21 +390,21 @@ export default function Dashboard() {
           <Card className="bg-slate-900/50 border-slate-700/50 backdrop-blur-sm">
             <CardContent className="p-4">
               <div className="text-sm text-slate-400 mb-1">Last Run Success</div>
-              <div className="text-lg font-mono text-cyan-400">{lastRunSuccess ? "True" : "False"}</div>
+              <div className="text-lg font-mono text-cyan-400">{getLastRunSuccess()}</div>
             </CardContent>
           </Card>
 
           <Card className="bg-slate-900/50 border-slate-700/50 backdrop-blur-sm">
             <CardContent className="p-4">
               <div className="text-sm text-slate-400 mb-1">Last Run Date</div>
-              <div className="text-lg font-mono text-cyan-400">{lastRunDate || "N/A"}</div>
+              <div className="text-lg font-mono text-cyan-400">{getLastRunDate()}</div>
             </CardContent>
           </Card>
 
           <Card className="bg-slate-900/50 border-slate-700/50 backdrop-blur-sm">
             <CardContent className="p-4">
               <div className="text-sm text-slate-400 mb-1">Total Records Fetched</div>
-              <div className="text-lg font-mono text-cyan-400">{totalRecordsFetched}</div>
+              <div className="text-lg font-mono text-cyan-400">{allRecords.length}</div>
             </CardContent>
           </Card>
         </div>
@@ -485,13 +414,7 @@ export default function Dashboard() {
             <CardContent className="p-4">
               <div className="text-sm text-slate-400 mb-1">Date/Time</div>
               <div className="text-lg font-mono text-cyan-400">
-                {currentTime ? (
-                  <>
-                    {formatDate(currentTime)} {formatTime(currentTime)}
-                  </>
-                ) : (
-                  "Loading..."
-                )}
+                {formatDate(currentTime)} {formatTime(currentTime)}
               </div>
             </CardContent>
           </Card>
@@ -552,20 +475,19 @@ export default function Dashboard() {
                 </TableHeader>
                 <TableBody>
                   {displayedRecords.length > 0 ? (
-                    displayedRecords.map((record) => (
-                      <TableRow key={record.id} className="border-b border-slate-700/30 hover:bg-slate-800/50">
-                        <TableCell className="font-mono text-slate-400">{formatDisplayDateTime(record.date_time)}</TableCell>
+                    displayedRecords.map((record, index) => (
+                      <TableRow key={index} className="border-b border-slate-700/30 hover:bg-slate-800/50">
+                        <TableCell className="font-mono text-slate-400">{formatDateTime(record.date_time)}</TableCell>
                         <TableCell className="font-mono text-slate-400">{record.source}</TableCell>
                         <TableCell className="font-mono text-cyan-400">{record.total_records}</TableCell>
                         <TableCell>
                           <Badge
-                            className={`${
-                              record.success_status
-                                ? "bg-green-500/20 text-green-400 border-green-500/50"
-                                : "bg-red-500/20 text-red-400 border-red-500/50"
-                            }`}
+                            className={`${record.success_status === "true"
+                              ? "bg-green-500/20 text-green-400 border-green-500/50"
+                              : "bg-red-500/20 text-red-400 border-red-500/50"
+                              }`}
                           >
-                            {record.success_status ? "True" : "False"}
+                            {record.success_status}
                           </Badge>
                         </TableCell>
                         <TableCell className="font-mono text-amber-400">{record.error_message}</TableCell>
