@@ -468,24 +468,40 @@ export default function Dashboard() {
                 </TableHeader>
                 <TableBody>
                   {displayedRecords.length > 0 ? (
-                    displayedRecords.map((record, index) => (
-                      <TableRow key={index} className="border-b border-slate-700/30 hover:bg-slate-800/50">
-                        <TableCell className="font-mono text-slate-400">{formatDateTime(record.date_time)}</TableCell>
-                        <TableCell className="font-mono text-slate-400">{record.source}</TableCell>
-                        <TableCell className="font-mono text-cyan-400">{record.total_records}</TableCell>
-                        <TableCell>
-                          <Badge
-                            className={`${record.success_status === "true"
-                              ? "bg-green-500/20 text-green-400 border-green-500/50"
-                              : "bg-red-500/20 text-red-400 border-red-500/50"
-                              }`}
-                          >
-                            {record.success_status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-mono text-amber-400">{record.error_message}</TableCell>
-                      </TableRow>
-                    ))
+                    <>
+                      {displayedRecords.map((record, index) => (
+                        <TableRow key={index} className="border-b border-slate-700/30 hover:bg-slate-800/50">
+                          <TableCell className="font-mono text-slate-400">{formatDateTime(record.date_time)}</TableCell>
+                          <TableCell className="font-mono text-slate-400">{record.source}</TableCell>
+                          <TableCell className="font-mono text-cyan-400">{record.total_records}</TableCell>
+                          <TableCell>
+                            <Badge
+                              className={`${record.success_status === "true"
+                                ? "bg-green-500/20 text-green-400 border-green-500/50"
+                                : "bg-red-500/20 text-red-400 border-red-500/50"
+                                }`}
+                            >
+                              {record.success_status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-mono text-amber-400">{record.error_message}</TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Add empty rows to maintain consistent height */}
+                      {Array.from({ length: itemsPerPage - displayedRecords.length }).map((_, index) => (
+                        <TableRow key={`empty-${index}`} className="border-b border-slate-700/30">
+                          <TableCell className="font-mono text-slate-400/30">--</TableCell>
+                          <TableCell className="font-mono text-slate-400/30">--</TableCell>
+                          <TableCell className="font-mono text-slate-400/30">--</TableCell>
+                          <TableCell>
+                            <Badge className="bg-slate-800/30 text-slate-400/30 border-slate-700/30">
+                              --
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-mono text-slate-400/30">--</TableCell>
+                        </TableRow>
+                      ))}
+                    </>
                   ) : (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-slate-400">
@@ -499,20 +515,8 @@ export default function Dashboard() {
 
             {/* Pagination Controls */}
             <div className="flex items-center justify-between border-t border-slate-700/50 p-4">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-slate-400">Rows per page:</span>
-                <select
-                  value={itemsPerPage}
-                  onChange={handleItemsPerPageChange}
-                  className="bg-slate-800 border border-slate-700 text-slate-100 py-1 px-2 rounded text-sm appearance-none focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-              </div>
-
+              <div className="flex items-center space-x-2"></div>
+              
               <div className="flex items-center space-x-1">
                 <span className="text-sm text-slate-400 mr-2">
                   {filteredRecords.length > 0
