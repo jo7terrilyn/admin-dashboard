@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useAuth } from "../context/AuthContext"
 
 interface MonitoringRecord {
   date_time: string
@@ -20,6 +21,7 @@ interface MonitoringRecord {
 }
 
 export default function Dashboard() {
+  const { logout } = useAuth()
   const [selectedSource, setSelectedSource] = useState<string>("All Sources")
   const [isLoading, setIsLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState<Date | null>(null)
@@ -365,23 +367,14 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <div className="hidden md:flex items-center space-x-1 bg-slate-800/50 rounded-full px-3 py-1.5 border border-slate-700/50 backdrop-blur-sm">
-              <Search className="h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search records..."
-                className="bg-transparent border-none focus:outline-none text-sm w-40 placeholder:text-slate-500"
-              />
-            </div>
-            <Button variant="outline" size="sm" className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-950/30">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="border-red-500/50 text-red-400 bg-red-950/30 hover:text-neutral-200 hover:bg-red-800"
+              onClick={logout}
+            >
+              Sign Out
             </Button>
-            <Link href="/sign-in">
-              <Button variant="outline" size="sm" className="border-red-500/50 text-red-400 hover:bg-red-950/30">
-                Sign Out
-              </Button>
-            </Link>
           </div>
         </header>
 

@@ -11,12 +11,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useAuth } from "../context/AuthContext"
 
 export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState("")
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const router = useRouter()
+  const { login } = useAuth()
 
   const [formData, setFormData] = useState({
     email: "",
@@ -27,13 +30,17 @@ export default function SignInPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("")
 
-    // Simulate authentication delay
-    setTimeout(() => {
-      setIsLoading(false)
-      // Redirect to dashboard after successful login
+    const success = login(formData.email, formData.password)
+    
+    if (success) {
       router.push("/dashboard")
-    }, 2000)
+    } else {
+      setError("Invalid email or password")
+    }
+    
+    setIsLoading(false)
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,7 +141,7 @@ export default function SignInPage() {
       <div className="container relative z-10 max-w-md px-4">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-            NEXUS OS
+            MONITORING DASHBOARD
           </h1>
           <p className="text-slate-400 mt-2">Access your monitoring dashboard</p>
         </div>
@@ -151,6 +158,9 @@ export default function SignInPage() {
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4 pt-6">
+              {error && (
+                <div className="text-red-500 text-sm text-center">{error}</div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-slate-300 font-mono">
                   EMAIL
@@ -224,23 +234,23 @@ export default function SignInPage() {
                   "Sign In"
                 )}
               </Button>
-              <div className="text-center text-sm text-slate-400">
+              {/* <div className="text-center text-sm text-slate-400">
                 <Link href="/forgot-password" className="text-cyan-400 hover:text-cyan-300">
                   Forgot password?
                 </Link>
-              </div>
-              <div className="text-center text-sm text-slate-400">
+              </div> */}
+              {/* <div className="text-center text-sm text-slate-400">
                 Don&apos;t have an account?{" "}
                 <Link href="/sign-up" className="text-cyan-400 hover:text-cyan-300">
                   Sign up
                 </Link>
-              </div>
+              </div> */}
             </CardFooter>
           </form>
         </Card>
 
         <div className="text-center mt-8">
-          <div className="text-xs text-slate-500">&copy; {new Date().getFullYear()} NEXUS OS. All rights reserved.</div>
+          <div className="text-xs text-slate-500">&copy; {new Date().getFullYear()} MONITORING DASHBOARD. All rights reserved.</div>
           <div className="text-xs text-slate-600 mt-1">SYSTEM VERSION 2.4.5</div>
         </div>
       </div>
