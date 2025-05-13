@@ -92,3 +92,59 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+
+
+
+
+/* General Styling */
+body {
+  font-family: Arial, sans-serif;
+}
+
+/* Sticky Navigation Bar */
+#caseInfoMenuBar {
+  background-color: #FAFAFA;
+  border-bottom: 1px solid #ddd;
+  padding: 0.5rem 1rem;
+  z-index: 1030;
+}
+
+/* Nav pills style */
+#caseInfoMenuBar .nav-link {
+  color: #333;
+  font-weight: 500;
+  margin-right: 10px;
+  border-radius: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.2s ease-in-out;
+}
+
+#caseInfoMenuBar .nav-link i {
+  margin-right: 6px;
+  font-size: 1rem;
+}
+
+/* Active tab */
+#caseInfoMenuBar .nav-link.active {
+  background-color: #e0e0e0;
+  color: #000;
+}
+
+/* Hidden nav items (e.g., .d-none) */
+#caseInfoMenuBar .nav-link.d-none {
+  display: none !important;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  #caseInfoMenuBar {
+      flex-wrap: wrap;
+  }
+
+  #caseInfoMenuBar .nav-link {
+      margin-bottom: 5px;
+  }
+}

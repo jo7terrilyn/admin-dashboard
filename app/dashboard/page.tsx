@@ -34,68 +34,15 @@ export default function Dashboard() {
 
   // Generate more sample data for pagination demo
   const generateSampleData = async (): Promise<MonitoringRecord[]> => {
-    // const sources = [
-    //   "Montgomery Probate",
-    //   "Montgomery Foreclosure",
-    //   "Montgomery Divorce",
-    //   "Greene Probate",
-    //   "Greene Foreclosure",
-    //   "Greene Divorce",
-    //   "Greene Tax",
-    // ]
-    // const statuses = ["true", "false"]
-    // const errors = [
-    //   "Cookie expired",
-    //   "CAPTCHA block",
-    //   "No new data found",
-    //   "Connection timeout",
-    //   "Authentication failed",
-    //   "Server error 500",
-    //   "Rate limit exceeded",
-    // ]
-
-
-    const endpoint = 'http://localhost:8000/api/v1/scraping-logs'
-    const response = await fetch(endpoint, {
+    const response = await fetch('/api/scraping-logs', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
     })
+    
     const data = await response.json()
-    console.log(data)
-
-
-
-    // const records: MonitoringRecord[] = data.map((record: MonitoringRecord) => ({
-    //   dateTime: record.dateTime,
-    //   source: record.source,
-    //   totalRecords: record.totalRecords,
-    //   successStatus: record.successStatus,
-    //   errorMessages: record.errorMessages,
-    // }))
-
-    // // Generate 50 sample records
-    // for (let i = 0; i < 50; i++) {
-    //   const date = new Date()
-    //   date.setDate(date.getDate() - Math.floor(Math.random() * 30)) // Random date within last 30 days
-    //   date.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60))
-
-    //   const dateTimeStr = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`
-    //   const source = sources[Math.floor(Math.random() * sources.length)]
-    //   const totalRecords = Math.floor(Math.random() * 20) + 1
-    //   const successStatus = Math.random() > 0.2 ? "True" : "False" // 80% success rate
-    //   const errorMessages = successStatus === "True" ? "" : errors[Math.floor(Math.random() * errors.length)]
-
-    //   records.push({
-    //     dateTime: dateTimeStr,
-    //     source,
-    //     totalRecords,
-    //     successStatus,
-    //     errorMessages,
-    //   })
-    // }
 
     // Sort by date (newest first)
     data.sort((a: MonitoringRecord, b: MonitoringRecord) => {
