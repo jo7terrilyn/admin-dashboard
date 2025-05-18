@@ -9,22 +9,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useAuth } from "../context/AuthContext"
 
 interface MonitoringRecord {
-  date_time: string
+  dateTime: string
   source: string
-  total_records: number | string
-  success_status: string
-  error_message: string
+  totalRecords: number
+  successStatus: string
+  errorMessages: string
 }
 
 export default function Dashboard() {
-  const { logout } = useAuth()
   const [selectedSource, setSelectedSource] = useState<string>("All Sources")
   const [isLoading, setIsLoading] = useState(true)
-  const [currentTime, setCurrentTime] = useState<Date | null>(null)
+  const [currentTime, setCurrentTime] = useState(new Date())
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   // Pagination state
@@ -33,25 +30,58 @@ export default function Dashboard() {
   const [totalPages, setTotalPages] = useState(1)
 
   // Generate more sample data for pagination demo
-  const generateSampleData = async (): Promise<MonitoringRecord[]> => {
-    const response = await fetch('/api/scraping-logs', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    })
+  const generateSampleData = (): MonitoringRecord[] => {
+    const sources = [
+      "Montgomery Probate",
+      "Montgomery Foreclosure",
+      "Montgomery Divorce",
+      "Greene Probate",
+      "Greene Foreclosure",
+      "Greene Divorce",
+      "Greene Tax",
+    ]
+    const statuses = ["True", "False"]
+    const errors = [
+      "Cookie expired",
+      "CAPTCHA block",
+      "No new data found",
+      "Connection timeout",
+      "Authentication failed",
+      "Server error 500",
+      "Rate limit exceeded",
+    ]
 
-    const data = await response.json()
+    const records: MonitoringRecord[] = []
+
+    // Generate 50 sample records
+    for (let i = 0; i < 50; i++) {
+      const date = new Date()
+      date.setDate(date.getDate() - Math.floor(Math.random() * 30)) // Random date within last 30 days
+      date.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60))
+
+      const dateTimeStr = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`
+      const source = sources[Math.floor(Math.random() * sources.length)]
+      const totalRecords = Math.floor(Math.random() * 20) + 1
+      const successStatus = Math.random() > 0.2 ? "True" : "False" // 80% success rate
+      const errorMessages = successStatus === "True" ? "" : errors[Math.floor(Math.random() * errors.length)]
+
+      records.push({
+        dateTime: dateTimeStr,
+        source,
+        totalRecords,
+        successStatus,
+        errorMessages,
+      })
+    }
 
     // Sort by date (newest first)
-    data.sort((a: MonitoringRecord, b: MonitoringRecord) => {
-      const dateA = new Date(a.date_time)
-      const dateB = new Date(b.date_time)
+    records.sort((a, b) => {
+      const dateA = new Date(a.dateTime)
+      const dateB = new Date(b.dateTime)
       return dateB.getTime() - dateA.getTime()
     })
 
-    return data
+    return records
   }
 
   // Sample data
@@ -60,43 +90,25 @@ export default function Dashboard() {
   const [displayedRecords, setDisplayedRecords] = useState<MonitoringRecord[]>([])
   const [sources, setSources] = useState<string[]>(["All Sources"])
 
-  // Get the most recent run date from records
-  const getLastRunDate = () => {
-    if (allRecords.length === 0) return "--/--/----"
-    const lastRecord = allRecords[0] // Records are already sorted by date in descending order
-    return formatDateTime(lastRecord.date_time)
-  }
-
-  // Get the success status of the most recent run
-  const getLastRunSuccess = () => {
-    if (allRecords.length === 0) return "--"
-    const lastRecord = allRecords[0]
-    return lastRecord.success_status === "true" ? "True" : "False"
-  }
-
   // Initialize data
   useEffect(() => {
-    const fetchData = async () => {
-      const records = await generateSampleData()
-      setAllRecords(records)
+    const records = generateSampleData()
+    setAllRecords(records)
 
-      // Set sources in the specified order
-      setSources([
-        "All Sources",
-        "Montgomery Probate",
-        "Montgomery Foreclosure",
-        "Montgomery Divorce",
-        "Greene Probate",
-        "Greene Foreclosure",
-        "Greene Divorce",
-        "Greene Tax",
-      ])
+    // Set sources in the specified order
+    setSources([
+      "All Sources",
+      "Montgomery Probate",
+      "Montgomery Foreclosure",
+      "Montgomery Divorce",
+      "Greene Probate",
+      "Greene Foreclosure",
+      "Greene Divorce",
+      "Greene Tax",
+    ])
 
-      // Set filtered records
-      setFilteredRecords(records)
-    }
-
-    fetchData()
+    // Set filtered records
+    setFilteredRecords(records)
   }, [])
 
   // Update displayed records when filtered records or pagination changes
@@ -140,11 +152,8 @@ export default function Dashboard() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Update time with client-only rendering
+  // Update time
   useEffect(() => {
-    // Set initial time only on client
-    setCurrentTime(new Date())
-
     const interval = setInterval(() => {
       setCurrentTime(new Date())
     }, 1000)
@@ -191,14 +200,10 @@ export default function Dashboard() {
       speedX: number
       speedY: number
       color: string
-      canvasWidth: number
-      canvasHeight: number
 
-      constructor(canvasWidth: number, canvasHeight: number) {
-        this.canvasWidth = canvasWidth
-        this.canvasHeight = canvasHeight
-        this.x = Math.random() * canvasWidth
-        this.y = Math.random() * canvasHeight
+      constructor() {
+        this.x = Math.random() * canvas.width
+        this.y = Math.random() * canvas.height
         this.size = Math.random() * 3 + 1
         this.speedX = (Math.random() - 0.5) * 0.5
         this.speedY = (Math.random() - 0.5) * 0.5
@@ -209,13 +214,14 @@ export default function Dashboard() {
         this.x += this.speedX
         this.y += this.speedY
 
-        if (this.x > this.canvasWidth) this.x = 0
-        if (this.x < 0) this.x = this.canvasWidth
-        if (this.y > this.canvasHeight) this.y = 0
-        if (this.y < 0) this.y = this.canvasHeight
+        if (this.x > canvas.width) this.x = 0
+        if (this.x < 0) this.x = canvas.width
+        if (this.y > canvas.height) this.y = 0
+        if (this.y < 0) this.y = canvas.height
       }
 
-      draw(ctx: CanvasRenderingContext2D) {
+      draw() {
+        if (!ctx) return
         ctx.fillStyle = this.color
         ctx.beginPath()
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
@@ -223,9 +229,8 @@ export default function Dashboard() {
       }
     }
 
-    // Create particles with canvas dimensions passed to constructor
     for (let i = 0; i < particleCount; i++) {
-      particles.push(new Particle(canvas.width, canvas.height))
+      particles.push(new Particle())
     }
 
     function animate() {
@@ -234,7 +239,7 @@ export default function Dashboard() {
 
       for (const particle of particles) {
         particle.update()
-        particle.draw(ctx)
+        particle.draw()
       }
 
       requestAnimationFrame(animate)
@@ -255,9 +260,8 @@ export default function Dashboard() {
     }
   }, [])
 
-  // Format time - only run on client when currentTime exists
-  const formatTime = (date: Date | null) => {
-    if (!date) return "--:--:--"
+  // Format time
+  const formatTime = (date: Date) => {
     return date.toLocaleTimeString("en-US", {
       hour12: false,
       hour: "2-digit",
@@ -266,20 +270,13 @@ export default function Dashboard() {
     })
   }
 
-  // Format date - only run on client when currentTime exists
-  const formatDate = (date: Date | null) => {
-    if (!date) return "--/--/----"
+  // Format date
+  const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
     })
-  }
-
-  // Format date time string to desired format
-  const formatDateTime = (dateTimeStr: string) => {
-    const date = new Date(dateTimeStr)
-    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`
   }
 
   return (
@@ -314,14 +311,23 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-red-500/50 text-red-400 bg-red-950/30 hover:text-neutral-200 hover:bg-red-800"
-              onClick={logout}
-            >
-              Sign Out
+            <div className="hidden md:flex items-center space-x-1 bg-slate-800/50 rounded-full px-3 py-1.5 border border-slate-700/50 backdrop-blur-sm">
+              <Search className="h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search records..."
+                className="bg-transparent border-none focus:outline-none text-sm w-40 placeholder:text-slate-500"
+              />
+            </div>
+            <Button variant="outline" size="sm" className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-950/30">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
             </Button>
+            <Link href="/sign-in">
+              <Button variant="outline" size="sm" className="border-red-500/50 text-red-400 hover:bg-red-950/30">
+                Sign Out
+              </Button>
+            </Link>
           </div>
         </header>
 
@@ -330,14 +336,14 @@ export default function Dashboard() {
           <Card className="bg-slate-900/50 border-slate-700/50 backdrop-blur-sm">
             <CardContent className="p-4">
               <div className="text-sm text-slate-400 mb-1">Last Run Success</div>
-              <div className="text-lg font-mono text-cyan-400">{getLastRunSuccess()}</div>
+              <div className="text-lg font-mono text-cyan-400">True</div>
             </CardContent>
           </Card>
 
           <Card className="bg-slate-900/50 border-slate-700/50 backdrop-blur-sm">
             <CardContent className="p-4">
               <div className="text-sm text-slate-400 mb-1">Last Run Date</div>
-              <div className="text-lg font-mono text-cyan-400">{getLastRunDate()}</div>
+              <div className="text-lg font-mono text-cyan-400">05/07/2024</div>
             </CardContent>
           </Card>
 
@@ -415,40 +421,25 @@ export default function Dashboard() {
                 </TableHeader>
                 <TableBody>
                   {displayedRecords.length > 0 ? (
-                    <>
-                      {displayedRecords.map((record, index) => (
-                        <TableRow key={index} className="border-b border-slate-700/30 hover:bg-slate-800/50">
-                          <TableCell className="font-mono text-slate-400">{formatDateTime(record.date_time)}</TableCell>
-                          <TableCell className="font-mono text-slate-400">{record.source}</TableCell>
-                          <TableCell className="font-mono text-cyan-400">{record.total_records}</TableCell>
-                          <TableCell>
-                            <Badge
-                              className={`${record.success_status === "true"
+                    displayedRecords.map((record, index) => (
+                      <TableRow key={index} className="border-b border-slate-700/30 hover:bg-slate-800/50">
+                        <TableCell className="font-mono text-slate-400">{record.dateTime}</TableCell>
+                        <TableCell className="font-mono text-slate-400">{record.source}</TableCell>
+                        <TableCell className="font-mono text-cyan-400">{record.totalRecords}</TableCell>
+                        <TableCell>
+                          <Badge
+                            className={`${
+                              record.successStatus === "True"
                                 ? "bg-green-500/20 text-green-400 border-green-500/50"
                                 : "bg-red-500/20 text-red-400 border-red-500/50"
-                                }`}
-                            >
-                              {record.success_status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-mono text-amber-400">{record.error_message}</TableCell>
-                        </TableRow>
-                      ))}
-                      {/* Add empty rows to maintain consistent height */}
-                      {Array.from({ length: itemsPerPage - displayedRecords.length }).map((_, index) => (
-                        <TableRow key={`empty-${index}`} className="border-b border-slate-700/30">
-                          <TableCell className="font-mono text-slate-400/30">--</TableCell>
-                          <TableCell className="font-mono text-slate-400/30">--</TableCell>
-                          <TableCell className="font-mono text-slate-400/30">--</TableCell>
-                          <TableCell>
-                            <Badge className="bg-slate-800/30 text-slate-400/30 border-slate-700/30">
-                              --
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-mono text-slate-400/30">--</TableCell>
-                        </TableRow>
-                      ))}
-                    </>
+                            }`}
+                          >
+                            {record.successStatus}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-amber-400">{record.errorMessages}</TableCell>
+                      </TableRow>
+                    ))
                   ) : (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-slate-400">
@@ -462,7 +453,19 @@ export default function Dashboard() {
 
             {/* Pagination Controls */}
             <div className="flex items-center justify-between border-t border-slate-700/50 p-4">
-              <div className="flex items-center space-x-2"></div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-slate-400">Rows per page:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={handleItemsPerPageChange}
+                  className="bg-slate-800 border border-slate-700 text-slate-100 py-1 px-2 rounded text-sm appearance-none focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
 
               <div className="flex items-center space-x-1">
                 <span className="text-sm text-slate-400 mr-2">

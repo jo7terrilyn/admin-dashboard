@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const endpoint = "http://localhost:8000/api/v1/scraping-logs";
+const endpoint = "https://montgomery-scraper.up.railway.app/api/v1/scraping-logs";
 
 export async function GET(request: NextRequest) {
   try {
